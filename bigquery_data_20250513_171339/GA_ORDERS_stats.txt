@@ -1,0 +1,35 @@
+Estadísticas básicas para GA_ORDERS
+==================================================
+
+Conteo de valores no nulos por columna:
+Date                             7650
+Transaction_ID                   7634
+Session_primary_channel_group    7650
+Campaign_ID                      7650
+Campaign                         7650
+Shipping_tier                    7633
+Page_title                       7650
+Key_events                       7650
+Shopify_Order_ID                 1297
+
+Tipos de datos:
+Date                              dbdate
+Transaction_ID                    object
+Session_primary_channel_group     object
+Campaign_ID                       object
+Campaign                          object
+Shipping_tier                     object
+Page_title                        object
+Key_events                       float64
+Shopify_Order_ID                  object
+
+Estadísticas numéricas:
+        Key_events
+count  7650.000000
+mean      1.820390
+std       1.993599
+min       0.000000
+25%       1.000000
+50%       2.000000
+75%       2.000000
+max      39.000000

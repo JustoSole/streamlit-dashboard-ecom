@@ -1,0 +1,41 @@
+Estadísticas básicas para GA_ADS_CAMPAIGNS
+==================================================
+
+Conteo de valores no nulos por columna:
+Date                     2659
+Campaign_ID              2659
+Campaign                 2659
+Primary_channel_group    2659
+Source                   2659
+Total_users              2659
+Sessions                 2659
+Ads_impressions          2659
+Ads_clicks               2659
+Ads_cost                 2659
+Return_on_ad_spend       2659
+Ads_CTR                  2659
+
+Tipos de datos:
+Date                      dbdate
+Campaign_ID               object
+Campaign                  object
+Primary_channel_group     object
+Source                    object
+Total_users                Int64
+Sessions                   Int64
+Ads_impressions            Int64
+Ads_clicks                 Int64
+Ads_cost                 float64
+Return_on_ad_spend       float64
+Ads_CTR                  float64
+
+Estadísticas numéricas:
+       Total_users  Sessions  Ads_impressions  Ads_clicks     Ads_cost  Return_on_ad_spend      Ads_CTR
+count       2659.0    2659.0           2659.0      2659.0  2659.000000         2659.000000  2659.000000
+mean      1.843174  2.000752      2395.924784   17.030086    22.926542            8.857276     0.030858
+std        3.91432  4.212829     11311.762734   68.617471   101.232757          224.517779     0.094083
+min            0.0       0.0              0.0         0.0     0.000000            0.000000     0.000000
+25%            0.0       0.0              0.0         0.0     0.000000            0.000000     0.000000
+50%            1.0       1.0              4.0         0.0     0.000000            0.000000     0.000000
+75%            2.0       2.0            234.0         6.0     6.310346            0.000000     0.010881
+max           50.0      53.0         123530.0       729.0  1272.004580         9773.000000     1.000000

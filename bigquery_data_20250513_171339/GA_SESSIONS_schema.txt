@@ -1,0 +1,11 @@
+Tabla: racket-central-gcp.racket_central_prd.GA_SESSIONS
+Total de filas: 0
+Muestra: 50% (0 filas)
+Fecha de descarga: 2025-05-13 17:13:57
+
+Esquema:
+• EVENT_DATE: DATE
+• TOTAL_USERS: INTEGER
+• TOTAL_SESSIONS: INTEGER
+• TOTAL_PURCHASES: INTEGER
+• SESSION_COUNTRY: STRING

@@ -1,0 +1,18 @@
+Tabla: racket-central-gcp.racket_central_prd.GA_ADS_CAMPAIGNS
+Total de filas: 0
+Muestra: 50% (0 filas)
+Fecha de descarga: 2025-05-13 17:14:03
+
+Esquema:
+• Date: DATE
+• Campaign_ID: STRING
+• Campaign: STRING
+• Primary_channel_group: STRING
+• Source: STRING
+• Total_users: INTEGER
+• Sessions: INTEGER
+• Ads_impressions: INTEGER
+• Ads_clicks: INTEGER
+• Ads_cost: FLOAT
+• Return_on_ad_spend: FLOAT
+• Ads_CTR: FLOAT
