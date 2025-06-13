@@ -1,0 +1,90 @@
+/* Main dashboard font and base colors */
+body, .stApp {
+    font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #F8F9FA;
+}
+
+/* Headers styling for a clean, modern look */
+h1, h2, h3 {
+    color: #008080; /* Teal from config.py */
+    font-weight: 600;
+}
+h1 { font-size: 2rem; }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.5rem; }
+h4 { font-size: 1.25rem; }
+h5 { font-size: 1.1rem; }
+
+/* Custom st.metric styling */
+.stMetric {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    border: 1px solid #E0E0E0;
+    transition: box-shadow 0.3s ease-in-out, transform 0.2s ease;
+}
+.stMetric:hover {
+    box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+}
+.stMetric label {
+    font-weight: 500;
+    color: #4B5563; /* Subdued label color */
+}
+.stMetric div[data-testid="stMetricValue"] {
+    font-size: 2.1rem;
+    font-weight: 600;
+    color: #008080; /* Teal from config.py */
+}
+.stMetric div[data-testid="stMetricDelta"] {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555E67;
+}
+
+/* General descriptive text under tabs or section titles */
+.dashboard-subtext {
+    font-size: 1rem;
+    color: #4A5568;
+    margin-bottom: 1.5rem;
+    font-style: normal;
+    line-height: 1.5;
+}
+
+/* Style st.tabs for a modern feel */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 16px;
+    border-bottom: 2px solid #D1D5DB;
+    padding-bottom: 0px;
+}
+.stTabs [data-baseweb="tab"] {
+    height: 44px;
+    white-space: pre-wrap;
+    background-color: transparent;
+    border-radius: 6px 6px 0px 0px;
+    padding: 0px 18px;
+    margin-bottom: -2px;
+    border: 2px solid transparent;
+    font-weight: 500;
+    color: #4B5563;
+    transition: color 0.2s ease;
+}
+.stTabs [data-baseweb="tab"]:hover {
+    background-color: #F3F4F6;
+    color: #1F2937;
+}
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background-color: #FFFFFF;
+    color: #008080; /* Teal from config.py */
+    border-color: #D1D5DB #D1D5DB #FFFFFF;
+    font-weight: 600;
+}
+
+/* Consistent styling for Alerts and Infos */
+.stAlert, .stInfo {
+    border-radius: 6px;
+}
+.stAlert[data-baseweb="alert"] p, .stInfo p {
+    font-size: 0.9rem;
+} 

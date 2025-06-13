@@ -132,4 +132,7 @@ cython_debug/
 *.code-workspace
 
 # Streamlit secrets
-.streamlit/secrets.toml 
+.streamlit/secrets.toml
+
+# Service account files
+service_account.json 
