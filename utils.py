@@ -12,38 +12,50 @@ import json
 def get_bigquery_client() -> Optional[bigquery.Client]:
     """
     Initializes and returns a BigQuery client using service account credentials.
-
-    This function securely loads credentials from the specified service account file
-    and creates a BigQuery client instance. It includes error handling for common
-    issues like a missing file or authentication failures.
-
-    Returns:
-        Optional[bigquery.Client]: A BigQuery client instance if successful, otherwise None.
+    It automatically handles credentials for both local and Streamlit Cloud environments.
     """
-    try:
-        service_account_path = config.SERVICE_ACCOUNT_FILE
-        if not os.path.exists(service_account_path):
-            st.error(f"Service account file not found at: {service_account_path}")
+    # Check if running in Streamlit Cloud
+    if 'GCP_SERVICE_ACCOUNT' in st.secrets:
+        try:
+            # Load credentials from Streamlit secrets
+            creds_json = dict(st.secrets.gcp_service_account)
+            credentials = service_account.Credentials.from_service_account_info(
+                creds_json, scopes=config.BIGQUERY_SCOPES
+            )
+            client = bigquery.Client(credentials=credentials, project=credentials.project_id)
+            print("BigQuery client created successfully from Streamlit secrets.")
+            return client
+        except Exception as e:
+            st.error("Failed to create BigQuery client from Streamlit secrets.")
+            st.error(e)
             return None
+    else:
+        # Fallback to local service_account.json file
+        try:
+            service_account_path = config.SERVICE_ACCOUNT_FILE
+            if not os.path.exists(service_account_path):
+                st.error(f"Service account file not found at: {service_account_path}")
+                st.error("Please ensure the file exists or set up Streamlit secrets for deployment.")
+                return None
 
-        with open(service_account_path, 'r') as source:
-            info = json.load(source)
+            with open(service_account_path, 'r') as source:
+                info = json.load(source)
+                
+            credentials = service_account.Credentials.from_service_account_info(
+                info, scopes=config.BIGQUERY_SCOPES
+            )
             
-        credentials = service_account.Credentials.from_service_account_info(
-            info, scopes=config.BIGQUERY_SCOPES
-        )
-        
-        client = bigquery.Client(
-            credentials=credentials, 
-            project=config.BIGQUERY_PROJECT_ID
-        )
-        
-        print(f"BigQuery client created successfully for project '{config.BIGQUERY_PROJECT_ID}'.")
-        return client
-        
-    except Exception as e:
-        print(f"ERROR: Failed to create BigQuery client: {e}")
-        return None
+            client = bigquery.Client(
+                credentials=credentials, 
+                project=config.BIGQUERY_PROJECT_ID
+            )
+            
+            print(f"BigQuery client created successfully for project '{config.BIGQUERY_PROJECT_ID}'.")
+            return client
+            
+        except Exception as e:
+            print(f"ERROR: Failed to create BigQuery client from local file: {e}")
+            return None
 
 def apply_custom_css():
     """Applies a global CSS stylesheet from an external file."""
