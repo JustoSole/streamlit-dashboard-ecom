@@ -15,7 +15,7 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
     It automatically handles credentials for both local and Streamlit Cloud environments.
     """
     # Check if running in Streamlit Cloud
-    if 'GCP_SERVICE_ACCOUNT' in st.secrets:
+    if 'gcp_service_account' in st.secrets:
         try:
             # Load credentials from Streamlit secrets
             creds_json = dict(st.secrets.gcp_service_account)
