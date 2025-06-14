@@ -29,6 +29,15 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
                 )
                 client = bigquery.Client(credentials=credentials, project=credentials.project_id)
                 st.success("✅ Connected to BigQuery using Streamlit secrets")
+                
+                # Debug: Test a simple query to verify connection
+                try:
+                    test_query = f"SELECT COUNT(*) as row_count FROM `{credentials.project_id}.{config.BIGQUERY_DATASET}.{config.BIGQUERY_TABLES['orders']}`"
+                    result = client.query(test_query).to_dataframe()
+                    st.info(f"🔍 Debug: Found {result.iloc[0]['row_count']} rows in orders table")
+                except Exception as e:
+                    st.warning(f"⚠️ Debug: Could not query orders table: {str(e)}")
+                
                 return client
             except Exception as e:
                 st.error(f"Failed to connect using Streamlit secrets: {str(e)}")
@@ -60,12 +69,129 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
         return None
 
 def apply_custom_css():
-    """Applies a global CSS stylesheet from an external file."""
+    """Applies custom CSS to the Streamlit app with fallback for deployment."""
+    # Enhanced CSS that works in both local and deployed environments
+    custom_css = """
+    <style>
+    /* Main dashboard font and base colors */
+    .stApp {
+        font-family: 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        background-color: #F8F9FA !important;
+    }
+
+    /* Headers styling for a clean, modern look */
+    h1, h2, h3 {
+        color: #008080 !important; /* Teal from config.py */
+        font-weight: 600 !important;
+    }
+    h1 { font-size: 2rem !important; }
+    h2 { font-size: 1.75rem !important; }
+    h3 { font-size: 1.5rem !important; }
+    h4 { font-size: 1.25rem !important; }
+    h5 { font-size: 1.1rem !important; }
+
+    /* Custom st.metric styling */
+    [data-testid="metric-container"] {
+        background-color: #FFFFFF !important;
+        border-radius: 8px !important;
+        padding: 18px 20px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+        border: 1px solid #E0E0E0 !important;
+        transition: box-shadow 0.3s ease-in-out, transform 0.2s ease !important;
+    }
+    [data-testid="metric-container"]:hover {
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08) !important;
+        transform: translateY(-2px) !important;
+    }
+    [data-testid="metric-container"] label {
+        font-weight: 500 !important;
+        color: #4B5563 !important; /* Subdued label color */
+    }
+    [data-testid="metric-container"] [data-testid="stMetricValue"] {
+        font-size: 2.1rem !important;
+        font-weight: 600 !important;
+        color: #008080 !important; /* Teal from config.py */
+    }
+    [data-testid="metric-container"] [data-testid="stMetricDelta"] {
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        color: #555E67 !important;
+    }
+
+    /* Style st.tabs for a modern feel */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 16px !important;
+        border-bottom: 2px solid #D1D5DB !important;
+        padding-bottom: 0px !important;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 44px !important;
+        white-space: pre-wrap !important;
+        background-color: transparent !important;
+        border-radius: 6px 6px 0px 0px !important;
+        padding: 0px 18px !important;
+        margin-bottom: -2px !important;
+        border: 2px solid transparent !important;
+        font-weight: 500 !important;
+        color: #4B5563 !important;
+        transition: color 0.2s ease !important;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background-color: #F3F4F6 !important;
+        color: #1F2937 !important;
+    }
+    .stTabs [data-baseweb="tab"][aria-selected="true"] {
+        background-color: #FFFFFF !important;
+        color: #008080 !important; /* Teal from config.py */
+        border-color: #D1D5DB #D1D5DB #FFFFFF !important;
+        font-weight: 600 !important;
+    }
+
+    /* Consistent styling for Alerts and Infos */
+    .stAlert, .stInfo {
+        border-radius: 6px !important;
+    }
+    .stAlert[data-baseweb="alert"] p, .stInfo p {
+        font-size: 0.9rem !important;
+    }
+    
+    /* Fix sidebar contrast */
+    .css-1d391kg {
+        background-color: #FFFFFF !important;
+    }
+    
+    /* Ensure proper text contrast */
+    .stMarkdown, .stText {
+        color: #1F2937 !important;
+    }
+    
+    /* Fix button styling */
+    .stButton > button {
+        background-color: #008080 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 6px !important;
+        font-weight: 500 !important;
+    }
+    .stButton > button:hover {
+        background-color: #006666 !important;
+        transform: translateY(-1px) !important;
+    }
+    </style>
+    """
+    
+    # Try to load external CSS file first, then fallback to inline CSS
     try:
-        with open("style.css", "r") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.warning("style.css not found. Using default Streamlit styling.")
+        if os.path.exists("style.css"):
+            with open("style.css", "r") as f:
+                file_css = f"<style>{f.read()}</style>"
+                st.markdown(file_css, unsafe_allow_html=True)
+        else:
+            # Use inline CSS for deployment
+            st.markdown(custom_css, unsafe_allow_html=True)
+    except Exception as e:
+        # Fallback to inline CSS if file loading fails
+        st.markdown(custom_css, unsafe_allow_html=True)
 
 def safe_division(numerator: Union[float, pd.Series], denominator: Union[float, pd.Series], default: float = 0.0) -> Union[float, pd.Series]:
     """

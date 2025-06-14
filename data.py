@@ -16,11 +16,18 @@ def load_single_table(table_name: str, client: bigquery.Client, columns: Optiona
             query += f" LIMIT {config.MAX_QUERY_ROWS}"
             
         print(f"Querying table: {table_name}...")
+        # Add Streamlit debug info for deployment
+        import streamlit as st
+        st.info(f"🔍 Debug: Querying table {table_name}")
+        
         df = client.query(query).to_dataframe()
         print(f"Successfully loaded {len(df)} rows from {table_name}.")
+        st.info(f"✅ Debug: Loaded {len(df)} rows from {table_name}")
         return df
     except Exception as e:
         print(f"ERROR: Failed to load table {table_name}: {e}")
+        import streamlit as st
+        st.error(f"❌ Debug: Failed to load table {table_name}: {str(e)}")
         return None
 
 def load_all_tables(client: bigquery.Client) -> Dict[str, pd.DataFrame]:
@@ -264,10 +271,14 @@ def filter_data_by_date(data: Dict[str, pd.DataFrame], start_date: pd.Timestamp,
     Filters all dataframes in the dictionary based on a date range.
     It checks for common date columns like 'order_create_date' or 'campaign_date'.
     """
+    import streamlit as st
+    st.info(f"🔍 Debug: Filtering data from {start_date.date()} to {end_date.date()}")
+    
     filtered_data = {}
     for name, df in data.items():
         if df.empty:
             filtered_data[name] = df
+            st.info(f"🔍 Debug: {name} table is empty, skipping filter")
             continue
 
         # Determine which date column to use for filtering
@@ -280,6 +291,8 @@ def filter_data_by_date(data: Dict[str, pd.DataFrame], start_date: pd.Timestamp,
             date_col = 'campaign_date'
         
         if date_col:
+            st.info(f"🔍 Debug: Filtering {name} table using {date_col} column")
+            
             # Make a copy only if we need to modify the date column
             df_to_filter = df
             
@@ -303,10 +316,14 @@ def filter_data_by_date(data: Dict[str, pd.DataFrame], start_date: pd.Timestamp,
                 (df_to_filter.loc[valid_dates, date_col].dt.date >= start_date.date()) &
                 (df_to_filter.loc[valid_dates, date_col].dt.date <= end_date.date())
             )
-            filtered_data[name] = df_to_filter[valid_dates][mask]
+            filtered_df = df_to_filter[valid_dates][mask]
+            filtered_data[name] = filtered_df
+            
+            st.info(f"✅ Debug: {name} filtered from {len(df)} to {len(filtered_df)} rows")
         else:
             # If no date column is found, return the original dataframe
             filtered_data[name] = df
+            st.info(f"🔍 Debug: No date column found in {name}, keeping all {len(df)} rows")
             
     return filtered_data
 
