@@ -28,7 +28,6 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
                     scopes=["https://www.googleapis.com/auth/cloud-platform"]
                 )
                 client = bigquery.Client(credentials=credentials, project=credentials.project_id)
-                st.success("✅ Connected to BigQuery using Streamlit secrets")
                 return client
             except Exception as e:
                 st.error(f"Failed to connect using Streamlit secrets: {str(e)}")

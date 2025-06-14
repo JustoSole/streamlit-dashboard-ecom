@@ -69,8 +69,6 @@ def main():
     # --- 3. Data Filtering ---
     filtered_data = data.filter_data_by_date(all_data, start_date, end_date)
 
-    st.success(f"Data filtered from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-
     # --- 4. Tab Rendering ---
     (
         overview_tab, 
