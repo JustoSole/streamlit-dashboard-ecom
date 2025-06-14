@@ -10,24 +10,43 @@ def load_single_table(table_name: str, client: bigquery.Client, columns: Optiona
     """
     Loads a single table from BigQuery.
     """
+    import streamlit as st
+    
     try:
         query = f"SELECT {', '.join(columns) if columns else '*'} FROM `{table_name}`"
         if config.MAX_QUERY_ROWS:
             query += f" LIMIT {config.MAX_QUERY_ROWS}"
             
         print(f"Querying table: {table_name}...")
-        # Add Streamlit debug info for deployment
-        import streamlit as st
-        st.info(f"🔍 Debug: Querying table {table_name}")
+        st.info(f"🔍 Debug: Executing query: {query[:100]}...")
         
+        # First, let's check if the table exists
+        try:
+            table_ref = client.get_table(table_name)
+            st.info(f"✅ Debug: Table {table_name} exists with {table_ref.num_rows} rows")
+        except Exception as table_check_error:
+            st.error(f"❌ Debug: Table {table_name} does not exist or is not accessible: {str(table_check_error)}")
+            return None
+        
+        # Now execute the query
         df = client.query(query).to_dataframe()
         print(f"Successfully loaded {len(df)} rows from {table_name}.")
-        st.info(f"✅ Debug: Loaded {len(df)} rows from {table_name}")
+        st.success(f"✅ Debug: Query executed successfully, loaded {len(df)} rows from {table_name}")
         return df
+        
     except Exception as e:
+        error_msg = str(e)
         print(f"ERROR: Failed to load table {table_name}: {e}")
-        import streamlit as st
-        st.error(f"❌ Debug: Failed to load table {table_name}: {str(e)}")
+        st.error(f"❌ Debug: Failed to load table {table_name}: {error_msg}")
+        
+        # Provide more specific error information
+        if "not found" in error_msg.lower():
+            st.error(f"💡 Debug: Table {table_name} was not found. Check if the table name and dataset are correct.")
+        elif "permission" in error_msg.lower() or "access" in error_msg.lower():
+            st.error(f"💡 Debug: Permission denied accessing {table_name}. Check BigQuery permissions.")
+        elif "invalid" in error_msg.lower():
+            st.error(f"💡 Debug: Invalid query or table reference for {table_name}.")
+        
         return None
 
 def load_all_tables(client: bigquery.Client) -> Dict[str, pd.DataFrame]:
@@ -38,14 +57,30 @@ def load_all_tables(client: bigquery.Client) -> Dict[str, pd.DataFrame]:
     if not client:
         return {}
 
+    import streamlit as st
+    st.info("🔍 Debug: Starting to load all tables from BigQuery")
+    
     table_data = {}
     # Use the new, clean table names from the config
     for name, table_name in config.BIGQUERY_TABLES.items():
         # Dynamically construct the full table ID here. This is the robust way.
         full_table_id = f"{config.BIGQUERY_PROJECT_ID}.{config.BIGQUERY_DATASET}.{table_name}"
-        table_data[name] = load_single_table(full_table_id, client)
+        st.info(f"🔍 Debug: Attempting to load table: {name} -> {full_table_id}")
         
-    return process_all_tables({k: v for k, v in table_data.items() if v is not None and not v.empty})
+        loaded_table = load_single_table(full_table_id, client)
+        if loaded_table is not None:
+            table_data[name] = loaded_table
+            st.success(f"✅ Debug: Successfully loaded {name} with {len(loaded_table)} rows")
+        else:
+            st.error(f"❌ Debug: Failed to load table {name} ({full_table_id})")
+            # Create empty DataFrame with expected schema for failed tables
+            table_data[name] = pd.DataFrame()
+        
+    st.info(f"🔍 Debug: Loaded {len([t for t in table_data.values() if not t.empty])} non-empty tables out of {len(table_data)} total")
+    
+    # Always pass all tables to process_all_tables, even if empty
+    # The process_all_tables function will handle empty tables properly
+    return process_all_tables(table_data)
 
 def process_all_tables(raw_data: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
     """
