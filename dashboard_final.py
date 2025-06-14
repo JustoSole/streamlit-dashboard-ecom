@@ -53,55 +53,58 @@ def main():
     # --- 1. Data Loading ---
     # Use the new cached wrapper functions
     client = get_cached_bigquery_client()
-    if client:
-        all_data = load_cached_data(client)
+    if not client:
+        st.error("Failed to connect to BigQuery. Please check your credentials.", icon="🚨")
+        return
 
-        if not all_data:
-            st.error("Could not load any data. Check the connection and table configuration.")
-            return
+    all_data = load_cached_data(client)
 
-        # --- 2. Sidebar and Filters ---
-        start_date, end_date = sidebar.create(all_data)
+    if not all_data:
+        st.error("Could not load any data. Check the connection and table configuration.")
+        return
+
+    # --- 2. Sidebar and Filters ---
+    start_date, end_date = sidebar.create(all_data)
+    
+    # --- 3. Data Filtering ---
+    filtered_data = data.filter_data_by_date(all_data, start_date, end_date)
+
+    st.success(f"Data filtered from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
+
+    # --- 4. Tab Rendering ---
+    (
+        overview_tab, 
+        frequency_tab, 
+        ltv_tab, 
+        product_insights_tab, 
+        channels_tab, 
+        diagnostics_tab
+    ) = st.tabs([
+        "Overview", 
+        "Frequency & Recurrence", 
+        "LTV", 
+        "Product Insights", 
+        "Channels", 
+        "Diagnostics"
+    ])
+
+    with overview_tab:
+        overview.render(filtered_data, client, (start_date, end_date))
+
+    with frequency_tab:
+        frequency_analysis.render(all_data, filtered_data)
+
+    with ltv_tab:
+        ltv.render(filtered_data, all_data)
         
-        # --- 3. Data Filtering ---
-        filtered_data = data.filter_data_by_date(all_data, start_date, end_date)
-
-        st.success(f"Data filtered from {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}")
-
-        # --- 4. Tab Rendering ---
-        (
-            overview_tab, 
-            frequency_tab, 
-            ltv_tab, 
-            product_insights_tab, 
-            channels_tab, 
-            diagnostics_tab
-        ) = st.tabs([
-            "Overview", 
-            "Frequency & Recurrence", 
-            "LTV", 
-            "Product Insights", 
-            "Channels", 
-            "Diagnostics"
-        ])
-
-        with overview_tab:
-            overview.render(filtered_data, client, (start_date, end_date))
-
-        with frequency_tab:
-            frequency_analysis.render(all_data, filtered_data)
-
-        with ltv_tab:
-            ltv.render(filtered_data, all_data)
-            
-        with product_insights_tab:
-            product_insights.render(filtered_data, all_data)
-            
-        with channels_tab:
-            channels.render(filtered_data)
-            
-        with diagnostics_tab:
-            diagnostics.render(all_data, filtered_data)
+    with product_insights_tab:
+        product_insights.render(filtered_data, all_data)
+        
+    with channels_tab:
+        channels.render(filtered_data)
+        
+    with diagnostics_tab:
+        diagnostics.render(all_data, filtered_data)
 
 
 if __name__ == "__main__":

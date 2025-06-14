@@ -124,10 +124,11 @@ def test_bigquery_connection():
         print_section("4. VERIFICANDO ACCESO A TABLAS PRINCIPALES")
         
         tables_to_check = [
-            "racket-central-gcp.racket_central_prd.SHOPIFY_ORDERS_LINEITEMS",
-            "racket-central-gcp.racket_central_prd.GA_ORDERS",
-            "racket-central-gcp.racket_central_prd.GA_SESSIONS",
-            "racket-central-gcp.racket_central_prd.GA_ADS_CAMPAIGNS"
+            "racket-central-gcp.racket_central_dev.RAW_SHOPIFY_ORDERS",
+            "racket-central-gcp.racket_central_dev.RAW_SHOPIFY_CUSTOMERS",
+            "racket-central-gcp.racket_central_dev.RAW_GA_CAMPAIGN_METRICS",
+            "racket-central-gcp.racket_central_dev.RAW_GA_CAMPAIGN_TRANSACTIONS",
+            "racket-central-gcp.racket_central_dev.RAW_SHOPIFY_PRODUCTS"
         ]
         
         all_ok = True
