@@ -268,7 +268,7 @@ def process_ga_metrics(df: pd.DataFrame) -> pd.DataFrame:
     df_processed.columns = [col.lower() for col in df_processed.columns]
     
     rename_map = {
-        'campaign_users': 'total_users',
+        'campaign_new_users': 'total_users',
         'campaign_cost': 'ads_cost',
         'campaign_impressions': 'ads_impressions',
         'campaign_clicks': 'ads_clicks'

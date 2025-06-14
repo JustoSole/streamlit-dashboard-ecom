@@ -15,6 +15,7 @@ from tabs import product_insights
 from tabs import ltv
 from tabs import channels
 from tabs import diagnostics
+from tabs import customer_journey
 
 st.set_page_config(
     page_title="Customer Analysis",
@@ -75,14 +76,16 @@ def main():
         frequency_tab, 
         ltv_tab, 
         product_insights_tab, 
-        channels_tab, 
+        channels_tab,
+        customer_journey_tab,
         diagnostics_tab
     ) = st.tabs([
         "Overview", 
         "Frequency & Recurrence", 
         "LTV", 
         "Product Insights", 
-        "Channels", 
+        "Channels",
+        "Customer Journey",
         "Diagnostics"
     ])
 
@@ -100,6 +103,9 @@ def main():
         
     with channels_tab:
         channels.render(filtered_data)
+        
+    with customer_journey_tab:
+        customer_journey.render(all_data, filtered_data)
         
     with diagnostics_tab:
         diagnostics.render(all_data, filtered_data)

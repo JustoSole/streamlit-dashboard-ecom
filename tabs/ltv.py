@@ -41,6 +41,89 @@ def display_ltv_by_frequency(ltv_data: pd.DataFrame, all_orders: pd.DataFrame):
     fig = charts.create_bar_chart(avg_ltv_by_freq, x='freq_segment', y='ltv', title='Average LTV per Frequency Segment')
     charts.safe_plotly_chart(fig)
 
+def display_ltv_by_player_level(ltv_data: pd.DataFrame, all_orders_enriched: pd.DataFrame):
+    """Displays the average LTV based on the player level of the customer's first purchase."""
+    if ltv_data.empty or all_orders_enriched.empty:
+        return
+        
+    first_purchase_level = all_orders_enriched.loc[all_orders_enriched.groupby('customer_id')['order_create_date'].idxmin()]
+    ltv_with_level = pd.merge(ltv_data, first_purchase_level[['customer_id', 'player_level']], on='customer_id')
+    
+    # Filter out 'Unspecified' levels for cleaner analysis
+    ltv_with_level = ltv_with_level[ltv_with_level['player_level'] != 'Unspecified']
+    
+    if ltv_with_level.empty:
+        st.info("No data available for LTV by player level analysis.")
+        return
+    
+    avg_ltv_by_level = ltv_with_level.groupby('player_level')['ltv'].mean().reset_index()
+    fig = charts.create_bar_chart(avg_ltv_by_level, x='player_level', y='ltv', title='Average LTV per Player Level (First Purchase)')
+    charts.safe_plotly_chart(fig)
+
+def display_ltv_by_first_category(ltv_data: pd.DataFrame, all_orders_enriched: pd.DataFrame):
+    """Displays the average LTV based on the category of the customer's first purchase."""
+    if ltv_data.empty or all_orders_enriched.empty:
+        return
+        
+    first_purchase_category = all_orders_enriched.loc[all_orders_enriched.groupby('customer_id')['order_create_date'].idxmin()]
+    ltv_with_category = pd.merge(ltv_data, first_purchase_category[['customer_id', 'product_category']], on='customer_id')
+    
+    avg_ltv_by_category = ltv_with_category.groupby('product_category')['ltv'].mean().reset_index()
+    avg_ltv_by_category = avg_ltv_by_category.sort_values('ltv', ascending=False)
+    
+    fig = charts.create_bar_chart(avg_ltv_by_category, x='product_category', y='ltv', title='Average LTV per First Purchase Category')
+    charts.safe_plotly_chart(fig)
+
+def display_detailed_ltv_metrics_by_sport(ltv_data: pd.DataFrame, all_orders_enriched: pd.DataFrame):
+    """
+    Displays detailed LTV metrics segmented by sport universe with additional metrics.
+    """
+    st.subheader("Detailed LTV Metrics by Sport Universe")
+    
+    if ltv_data.empty or all_orders_enriched.empty:
+        st.info("No data available for detailed LTV analysis by sport.")
+        return
+        
+    first_purchase_sport = all_orders_enriched.loc[all_orders_enriched.groupby('customer_id')['order_create_date'].idxmin()]
+    ltv_with_sport = pd.merge(ltv_data, first_purchase_sport[['customer_id', 'sport_universe']], on='customer_id')
+    
+    # Calculate additional metrics
+    customer_order_counts = all_orders_enriched.groupby('customer_id').agg({
+        'order_id': 'nunique',  # Total orders per customer
+        'order_final_total_amount': 'sum'  # Total spent (LTV) - validation
+    }).reset_index()
+    customer_order_counts.columns = ['customer_id', 'total_orders', 'total_spent_validation']
+    
+    # Merge with sport data
+    detailed_analysis = pd.merge(
+        pd.merge(ltv_with_sport, customer_order_counts, on='customer_id'),
+        first_purchase_sport[['customer_id', 'order_final_total_amount']].rename(columns={'order_final_total_amount': 'first_purchase_amount'}),
+        on='customer_id'
+    )
+    
+    # Calculate metrics by sport
+    sport_metrics = detailed_analysis.groupby('sport_universe').agg({
+        'ltv': ['mean', 'median', 'count'],
+        'total_orders': 'mean',
+        'first_purchase_amount': 'mean'
+    }).round(2)
+    
+    # Flatten column names
+    sport_metrics.columns = ['Avg LTV', 'Median LTV', 'Customer Count', 'Avg Orders per Customer', 'Avg First Purchase']
+    
+    # Display table
+    st.dataframe(
+        sport_metrics,
+        column_config={
+            "Avg LTV": st.column_config.NumberColumn("Avg LTV", format="$%.2f"),
+            "Median LTV": st.column_config.NumberColumn("Median LTV", format="$%.2f"),
+            "Customer Count": st.column_config.NumberColumn("Customers", format="%d"),
+            "Avg Orders per Customer": st.column_config.NumberColumn("Avg Orders", format="%.1f"),
+            "Avg First Purchase": st.column_config.NumberColumn("Avg First Purchase", format="$%.2f")
+        },
+        use_container_width=True
+    )
+
 def display_ltv_by_sport(ltv_data: pd.DataFrame, all_orders_enriched: pd.DataFrame):
     """Displays the average LTV based on the sport of the customer's first purchase."""
     if ltv_data.empty or all_orders_enriched.empty:
@@ -129,15 +212,38 @@ def render(filtered_data: Dict[str, pd.DataFrame], all_data: Dict[str, pd.DataFr
 
     st.markdown("---")
     
-    # --- Charting Section ---
+    # --- Main LTV Analysis Section ---
+    st.subheader("🎯 Core LTV Analysis")
+    
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("LTV by Frequency Segment")
         display_ltv_by_frequency(ltv_data, all_orders)
+        
         st.subheader("LTV by Acquisition Channel")
         display_ltv_by_channel(ltv_data, all_orders_enriched)
+        
     with col2:
         st.subheader("LTV by First Purchase Sport")
         display_ltv_by_sport(ltv_data, all_orders_enriched)
+        
         st.subheader("LTV to CAC Ratio by Channel")
-        display_ltv_cac_ratio(ltv_data, all_orders_enriched, ga_metrics_data) 
+        display_ltv_cac_ratio(ltv_data, all_orders_enriched, ga_metrics_data)
+    
+    st.markdown("---")
+    
+    # --- Advanced Segmentation Section ---
+    st.subheader("🔍 Advanced LTV Segmentation")
+    
+    # Detailed metrics by sport first
+    display_detailed_ltv_metrics_by_sport(ltv_data, all_orders_enriched)
+    st.markdown("---")
+    
+    col3, col4 = st.columns(2)
+    with col3:
+        st.subheader("LTV by Player Level")
+        display_ltv_by_player_level(ltv_data, all_orders_enriched)
+        
+    with col4:
+        st.subheader("LTV by First Purchase Category")
+        display_ltv_by_first_category(ltv_data, all_orders_enriched) 

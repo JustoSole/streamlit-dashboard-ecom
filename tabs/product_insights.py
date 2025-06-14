@@ -6,6 +6,7 @@ from itertools import combinations
 import config 
 import utils
 from components import charts
+import plotly.express as px
 
 def display_top_products_recurrent(df_orders: pd.DataFrame, all_orders: pd.DataFrame):
     """
@@ -138,6 +139,155 @@ def display_category_migration(df_enriched: pd.DataFrame):
     fig = charts.create_sankey_diagram(migration_counts, source='product_category_first', target='product_category_second', value='count')
     charts.safe_plotly_chart(fig)
 
+def display_category_cross_sell_matrix(df_orders: pd.DataFrame):
+    """
+    Displays a matrix showing cross-sell relationships between product categories.
+    """
+    st.subheader("Category Cross-Sell Analysis")
+    
+    if df_orders.empty:
+        st.info("No data available for cross-sell analysis.")
+        return
+    
+    # Find orders with multiple categories
+    order_categories = df_orders.groupby('order_id')['product_category'].apply(set).reset_index()
+    order_categories = order_categories[order_categories['product_category'].apply(len) > 1]
+    
+    if order_categories.empty:
+        st.info("No orders with multiple product categories found.")
+        return
+    
+    # Create cross-sell matrix
+    all_categories = df_orders['product_category'].unique()
+    cross_sell_matrix = pd.DataFrame(0, index=all_categories, columns=all_categories)
+    
+    for categories in order_categories['product_category']:
+        category_list = list(categories)
+        for i in range(len(category_list)):
+            for j in range(len(category_list)):
+                if i != j:
+                    cross_sell_matrix.loc[category_list[i], category_list[j]] += 1
+    
+    # Convert to percentages
+    cross_sell_percent = cross_sell_matrix.div(cross_sell_matrix.sum(axis=1), axis=0) * 100
+    cross_sell_percent = cross_sell_percent.fillna(0)
+    
+    # Create heatmap
+    fig = px.imshow(
+        cross_sell_percent,
+        title="Cross-Sell Matrix: When Category A is purchased, % chance Category B is also purchased",
+        labels=dict(x="Also Purchased", y="Primary Category", color="Cross-Sell %"),
+        text_auto=".1f",
+        color_continuous_scale="Greens"
+    )
+    charts.safe_plotly_chart(fig)
+
+def display_category_player_level_insights(df_enriched: pd.DataFrame):
+    """
+    Displays advanced insights on category preferences by player level with purchase volumes.
+    """
+    st.subheader("Category Preferences by Player Level (Volume Analysis)")
+    
+    if df_enriched.empty:
+        st.info("No data available for category-level analysis.")
+        return
+    
+    # Filter out unspecified levels
+    df_clean = df_enriched[df_enriched['player_level'] != 'Unspecified']
+    
+    if df_clean.empty:
+        st.info("No data with specified player levels found.")
+        return
+    
+    # Calculate volume and revenue by category and level
+    category_level_analysis = df_clean.groupby(['player_level', 'product_category']).agg({
+        'lineitem_final_qty': 'sum',
+        'order_final_total_amount': 'sum',
+        'customer_id': 'nunique'
+    }).reset_index()
+    
+    category_level_analysis.columns = ['player_level', 'product_category', 'total_qty', 'total_revenue', 'unique_customers']
+    
+    # Calculate average order value and items per customer
+    category_level_analysis['avg_revenue_per_customer'] = category_level_analysis['total_revenue'] / category_level_analysis['unique_customers']
+    category_level_analysis['avg_qty_per_customer'] = category_level_analysis['total_qty'] / category_level_analysis['unique_customers']
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Pivot for quantity heatmap
+        qty_pivot = category_level_analysis.pivot(index='product_category', columns='player_level', values='total_qty').fillna(0)
+        fig1 = px.imshow(
+            qty_pivot,
+            title="Total Quantity Purchased by Category & Player Level",
+            labels=dict(x="Player Level", y="Product Category", color="Total Qty"),
+            text_auto=".0f",
+            color_continuous_scale="Blues"
+        )
+        charts.safe_plotly_chart(fig1)
+    
+    with col2:
+        # Pivot for revenue per customer heatmap
+        revenue_pivot = category_level_analysis.pivot(index='product_category', columns='player_level', values='avg_revenue_per_customer').fillna(0)
+        fig2 = px.imshow(
+            revenue_pivot,
+            title="Avg Revenue per Customer by Category & Level",
+            labels=dict(x="Player Level", y="Product Category", color="Avg Revenue"),
+            text_auto=".0f",
+            color_continuous_scale="Oranges"
+        )
+        charts.safe_plotly_chart(fig2)
+    
+    # Show detailed table
+    st.subheader("Detailed Category-Level Performance")
+    display_table = category_level_analysis.sort_values(['player_level', 'total_revenue'], ascending=[True, False])
+    
+    st.dataframe(
+        display_table,
+        column_config={
+            "player_level": st.column_config.TextColumn("Player Level"),
+            "product_category": st.column_config.TextColumn("Product Category"),
+            "total_qty": st.column_config.NumberColumn("Total Qty", format="%d"),
+            "total_revenue": st.column_config.NumberColumn("Total Revenue", format="$%.2f"),
+            "unique_customers": st.column_config.NumberColumn("Customers", format="%d"),
+            "avg_revenue_per_customer": st.column_config.NumberColumn("Avg Revenue/Customer", format="$%.2f"),
+            "avg_qty_per_customer": st.column_config.NumberColumn("Avg Qty/Customer", format="%.1f")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+
+def display_sport_category_correlation(df_enriched: pd.DataFrame):
+    """
+    Shows the correlation between sport universe and product categories.
+    """
+    st.subheader("Sport Universe vs Product Category Analysis")
+    
+    if df_enriched.empty:
+        st.info("No data available for sport-category correlation.")
+        return
+    
+    # Create contingency table
+    sport_category_table = pd.crosstab(df_enriched['sport_universe'], df_enriched['product_category'], normalize='index') * 100
+    
+    # Create heatmap
+    fig = px.imshow(
+        sport_category_table,
+        title="Product Category Distribution by Sport Universe (%)",
+        labels=dict(x="Product Category", y="Sport Universe", color="Percentage"),
+        text_auto=".1f",
+        color_continuous_scale="Viridis"
+    )
+    charts.safe_plotly_chart(fig)
+    
+    # Show insights
+    with st.expander("🏆 Sport-Category Insights"):
+        st.markdown("**Key Observations:**")
+        for sport in sport_category_table.index:
+            top_category = sport_category_table.loc[sport].idxmax()
+            top_percentage = sport_category_table.loc[sport].max()
+            st.markdown(f"- **{sport}**: Most popular category is *{top_category}* ({top_percentage:.1f}% of purchases)")
+
 def render(filtered_data: Dict[str, pd.DataFrame], all_data: Dict[str, pd.DataFrame]):
     """Renders the complete Product Insights tab."""
     st.header("Product & Purchase Behavior Insights")
@@ -171,4 +321,13 @@ def render(filtered_data: Dict[str, pd.DataFrame], all_data: Dict[str, pd.DataFr
     display_purchase_seasonality(orders_enriched)
     st.markdown("---")
     st.subheader("Customer Migration Between Product Categories")
-    display_category_migration(orders_enriched) 
+    display_category_migration(orders_enriched)
+    st.markdown("---")
+    st.subheader("Category Cross-Sell Analysis")
+    display_category_cross_sell_matrix(orders_enriched)
+    st.markdown("---")
+    st.subheader("Category Preferences by Player Level (Volume Analysis)")
+    display_category_player_level_insights(orders_enriched)
+    st.markdown("---")
+    st.subheader("Sport Universe vs Product Category Analysis")
+    display_sport_category_correlation(orders_enriched) 

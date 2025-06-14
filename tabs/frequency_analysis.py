@@ -123,6 +123,73 @@ def display_cohort_retention(all_orders: pd.DataFrame):
     )
     charts.safe_plotly_chart(fig)
 
+def display_purchase_segments_by_category_level(all_orders: pd.DataFrame):
+    """
+    Displays purchase frequency segments within each category by player level.
+    """
+    st.subheader("Purchase Segments within Categories by Player Level")
+    
+    if all_orders.empty:
+        st.info("No data available for segmented analysis.")
+        return
+    
+    # Filter out unspecified levels
+    df_clean = all_orders[all_orders['player_level'] != 'Unspecified']
+    
+    if df_clean.empty:
+        st.info("No data with specified player levels found.")
+        return
+    
+    # Calculate purchase frequency by customer
+    customer_category_freq = df_clean.groupby(['customer_id', 'product_category', 'player_level']).agg({
+        'order_id': 'nunique',
+        'order_final_total_amount': 'sum'
+    }).reset_index()
+    
+    customer_category_freq.columns = ['customer_id', 'product_category', 'player_level', 'num_orders', 'total_spent']
+    
+    # Create frequency segments
+    customer_category_freq['frequency_segment'] = pd.cut(
+        customer_category_freq['num_orders'], 
+        bins=FREQUENCY_BINS, 
+        labels=FREQUENCY_LABELS, 
+        right=False
+    )
+    
+    # Analyze segments by category and level
+    segment_analysis = customer_category_freq.groupby(['product_category', 'player_level', 'frequency_segment']).agg({
+        'customer_id': 'count',
+        'total_spent': 'mean'
+    }).reset_index()
+    
+    segment_analysis.columns = ['product_category', 'player_level', 'frequency_segment', 'customer_count', 'avg_spent']
+    
+    # Create pivot for visualization
+    segment_pivot = segment_analysis.pivot_table(
+        index=['product_category', 'player_level'], 
+        columns='frequency_segment', 
+        values='customer_count', 
+        fill_value=0
+    )
+    
+    # Calculate percentages
+    segment_percent = segment_pivot.div(segment_pivot.sum(axis=1), axis=0) * 100
+    
+    # Display as table
+    st.dataframe(
+        segment_percent.round(1),
+        column_config={col: st.column_config.NumberColumn(f"{col} (%)", format="%.1f%%") for col in segment_percent.columns},
+        use_container_width=True
+    )
+    
+    # Show insights
+    with st.expander("📊 Segment Insights by Category-Level"):
+        st.markdown("**Key Observations:**")
+        for (category, level), row in segment_percent.iterrows():
+            loyal_pct = row.get('6+ Orders (Loyal)', 0)
+            single_pct = row.get('1 Order (Single Buyer)', 0)
+            st.markdown(f"- **{category} - {level}**: {loyal_pct:.1f}% loyal customers, {single_pct:.1f}% single buyers")
+
 def display_recurrence_by_first_purchase(df_orders: pd.DataFrame):
     """
     Displays heatmaps analyzing recurrence patterns based on the sport and level of a customer's first purchase.
@@ -193,6 +260,10 @@ def render(all_data: Dict[str, pd.DataFrame], filtered_data: Dict[str, pd.DataFr
 
     st.subheader("Monthly Customer Retention by Cohort")
     display_cohort_retention(all_orders_enriched)
+    st.markdown("---")
+
+    st.subheader("Purchase Segments within Categories by Player Level")
+    display_purchase_segments_by_category_level(all_orders_enriched)
     st.markdown("---")
 
     st.subheader("Recurrence by First Purchase: Sport & Player Level")

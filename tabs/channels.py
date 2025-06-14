@@ -86,6 +86,92 @@ def display_performance_trends(ga_df: pd.DataFrame):
     )
     charts.safe_plotly_chart(fig)
 
+def display_customer_acquisition_table(ga_df: pd.DataFrame):
+    """
+    Displays a customer acquisition metrics table by channel group.
+    """
+    st.subheader("Customer Acquisition Metrics by Channel")
+    
+    if ga_df.empty:
+        st.info("No data available for customer acquisition analysis.")
+        return
+    
+    # Calculate acquisition metrics by channel group
+    acquisition_table = ga_df.groupby('primary_channel_group').agg(
+        Total_Cost=('ads_cost', 'sum'),
+        New_Users=('total_users', 'sum'),  # This is now new users after our data processing change
+        Conversions=('campaign_purchase_events', 'sum'),
+        Revenue=('campaign_total_revenue', 'sum')
+    ).reset_index()
+    
+    # Calculate derived metrics
+    acquisition_table['CAC'] = utils.safe_division(acquisition_table['Total_Cost'], acquisition_table['New_Users'])
+    acquisition_table['Conversion_Rate'] = 100 * utils.safe_division(acquisition_table['Conversions'], acquisition_table['New_Users'])
+    acquisition_table['Customer_Acquisition_Rate'] = 100 * utils.safe_division(acquisition_table['Conversions'], acquisition_table['New_Users'])
+    acquisition_table['Revenue_per_New_User'] = utils.safe_division(acquisition_table['Revenue'], acquisition_table['New_Users'])
+    acquisition_table['ROAS'] = utils.safe_division(acquisition_table['Revenue'], acquisition_table['Total_Cost'])
+    
+    # Sort by CAC (ascending - lower is better)
+    acquisition_table = acquisition_table.sort_values('CAC', ascending=True)
+    
+    # Reorder columns for better presentation
+    acquisition_table = acquisition_table[[
+        'primary_channel_group', 'New_Users', 'Conversions', 'Customer_Acquisition_Rate',
+        'CAC', 'Revenue_per_New_User', 'ROAS', 'Total_Cost', 'Revenue'
+    ]]
+    
+    # Display with rich formatting
+    st.dataframe(
+        acquisition_table,
+        column_config={
+            "primary_channel_group": st.column_config.TextColumn("Channel Group"),
+            "New_Users": st.column_config.NumberColumn("New Users", format="%d"),
+            "Conversions": st.column_config.NumberColumn("Conversions", format="%d"),
+            "Customer_Acquisition_Rate": st.column_config.NumberColumn(
+                "Acquisition Rate (%)",
+                help="Percentage of new users who converted to customers",
+                format="%.2f%%"
+            ),
+            "CAC": st.column_config.NumberColumn(
+                "CAC ($)",
+                help="Customer Acquisition Cost (Cost / New Users)",
+                format="$%.2f"
+            ),
+            "Revenue_per_New_User": st.column_config.NumberColumn(
+                "Revenue per New User ($)",
+                help="Average revenue generated per new user",
+                format="$%.2f"
+            ),
+            "ROAS": st.column_config.NumberColumn(
+                "ROAS",
+                help="Return on Ad Spend",
+                format="%.2fx"
+            ),
+            "Total_Cost": st.column_config.NumberColumn("Total Cost ($)", format="$%.2f"),
+            "Revenue": st.column_config.NumberColumn("Total Revenue ($)", format="$%.2f")
+        },
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    # Add insights
+    with st.expander("💡 Customer Acquisition Insights"):
+        if not acquisition_table.empty:
+            best_cac_channel = acquisition_table.iloc[0]['primary_channel_group']
+            best_cac_value = acquisition_table.iloc[0]['CAC']
+            
+            best_rate_row = acquisition_table.loc[acquisition_table['Customer_Acquisition_Rate'].idxmax()]
+            best_rate_channel = best_rate_row['primary_channel_group']
+            best_rate_value = best_rate_row['Customer_Acquisition_Rate']
+            
+            st.markdown(f"""
+            **Key Insights:**
+            - **Lowest CAC**: {best_cac_channel} at ${best_cac_value:.2f} per customer
+            - **Highest Acquisition Rate**: {best_rate_channel} at {best_rate_value:.1f}%
+            - **Total New Users Acquired**: {acquisition_table['New_Users'].sum():,}
+            - **Overall Conversion Rate**: {100 * acquisition_table['Conversions'].sum() / acquisition_table['New_Users'].sum():.2f}%
+            """)
+
 def display_performance_table(df: pd.DataFrame, group_by_col: str, display_title: str):
     """
     Displays a detailed performance table grouped by a specific column, with visual enhancements.
@@ -245,4 +331,5 @@ def render(filtered_data: Dict[str, pd.DataFrame]):
         display_performance_table(ga_df, 'campaign_name', "Campaign Name")
         
     st.markdown("---")
-    display_channel_group_explorer(ga_df) 
+    display_channel_group_explorer(ga_df)
+    display_customer_acquisition_table(ga_df) 
