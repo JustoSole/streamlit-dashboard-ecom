@@ -29,28 +29,6 @@ def get_bigquery_client() -> Optional[bigquery.Client]:
                 )
                 client = bigquery.Client(credentials=credentials, project=credentials.project_id)
                 st.success("✅ Connected to BigQuery using Streamlit secrets")
-                
-                # Debug: List available tables in the dataset
-                try:
-                    dataset_ref = client.dataset(config.BIGQUERY_DATASET)
-                    tables = list(client.list_tables(dataset_ref))
-                    table_names = [table.table_id for table in tables]
-                    st.info(f"🔍 Debug: Available tables in {config.BIGQUERY_DATASET}: {', '.join(table_names)}")
-                    
-                    # Check if our expected tables exist
-                    missing_tables = []
-                    for name, table_name in config.BIGQUERY_TABLES.items():
-                        if table_name not in table_names:
-                            missing_tables.append(f"{name} ({table_name})")
-                    
-                    if missing_tables:
-                        st.warning(f"⚠️ Debug: Missing expected tables: {', '.join(missing_tables)}")
-                    else:
-                        st.success("✅ Debug: All expected tables found in dataset")
-                        
-                except Exception as e:
-                    st.warning(f"⚠️ Debug: Could not list tables in dataset: {str(e)}")
-                
                 return client
             except Exception as e:
                 st.error(f"Failed to connect using Streamlit secrets: {str(e)}")

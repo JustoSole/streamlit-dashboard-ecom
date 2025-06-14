@@ -10,42 +10,29 @@ def load_single_table(table_name: str, client: bigquery.Client, columns: Optiona
     """
     Loads a single table from BigQuery.
     """
-    import streamlit as st
-    
     try:
         query = f"SELECT {', '.join(columns) if columns else '*'} FROM `{table_name}`"
         if config.MAX_QUERY_ROWS:
             query += f" LIMIT {config.MAX_QUERY_ROWS}"
             
         print(f"Querying table: {table_name}...")
-        st.info(f"🔍 Debug: Executing query: {query[:100]}...")
-        
-        # First, let's check if the table exists
-        try:
-            table_ref = client.get_table(table_name)
-            st.info(f"✅ Debug: Table {table_name} exists with {table_ref.num_rows} rows")
-        except Exception as table_check_error:
-            st.error(f"❌ Debug: Table {table_name} does not exist or is not accessible: {str(table_check_error)}")
-            return None
-        
-        # Now execute the query
         df = client.query(query).to_dataframe()
         print(f"Successfully loaded {len(df)} rows from {table_name}.")
-        st.success(f"✅ Debug: Query executed successfully, loaded {len(df)} rows from {table_name}")
         return df
         
     except Exception as e:
         error_msg = str(e)
         print(f"ERROR: Failed to load table {table_name}: {e}")
-        st.error(f"❌ Debug: Failed to load table {table_name}: {error_msg}")
+        import streamlit as st
+        st.error(f"❌ Failed to load table {table_name}: {error_msg}")
         
-        # Provide more specific error information
-        if "not found" in error_msg.lower():
-            st.error(f"💡 Debug: Table {table_name} was not found. Check if the table name and dataset are correct.")
+        # Provide specific error information for common issues
+        if "db-dtypes" in error_msg.lower():
+            st.error("💡 Missing required package 'db-dtypes' for BigQuery data types. Please check requirements.txt")
+        elif "not found" in error_msg.lower():
+            st.error(f"💡 Table {table_name} was not found. Check if the table name and dataset are correct.")
         elif "permission" in error_msg.lower() or "access" in error_msg.lower():
-            st.error(f"💡 Debug: Permission denied accessing {table_name}. Check BigQuery permissions.")
-        elif "invalid" in error_msg.lower():
-            st.error(f"💡 Debug: Invalid query or table reference for {table_name}.")
+            st.error(f"💡 Permission denied accessing {table_name}. Check BigQuery permissions.")
         
         return None
 
@@ -57,26 +44,18 @@ def load_all_tables(client: bigquery.Client) -> Dict[str, pd.DataFrame]:
     if not client:
         return {}
 
-    import streamlit as st
-    st.info("🔍 Debug: Starting to load all tables from BigQuery")
-    
     table_data = {}
     # Use the new, clean table names from the config
     for name, table_name in config.BIGQUERY_TABLES.items():
         # Dynamically construct the full table ID here. This is the robust way.
         full_table_id = f"{config.BIGQUERY_PROJECT_ID}.{config.BIGQUERY_DATASET}.{table_name}"
-        st.info(f"🔍 Debug: Attempting to load table: {name} -> {full_table_id}")
         
         loaded_table = load_single_table(full_table_id, client)
         if loaded_table is not None:
             table_data[name] = loaded_table
-            st.success(f"✅ Debug: Successfully loaded {name} with {len(loaded_table)} rows")
         else:
-            st.error(f"❌ Debug: Failed to load table {name} ({full_table_id})")
             # Create empty DataFrame with expected schema for failed tables
             table_data[name] = pd.DataFrame()
-        
-    st.info(f"🔍 Debug: Loaded {len([t for t in table_data.values() if not t.empty])} non-empty tables out of {len(table_data)} total")
     
     # Always pass all tables to process_all_tables, even if empty
     # The process_all_tables function will handle empty tables properly
@@ -306,14 +285,10 @@ def filter_data_by_date(data: Dict[str, pd.DataFrame], start_date: pd.Timestamp,
     Filters all dataframes in the dictionary based on a date range.
     It checks for common date columns like 'order_create_date' or 'campaign_date'.
     """
-    import streamlit as st
-    st.info(f"🔍 Debug: Filtering data from {start_date.date()} to {end_date.date()}")
-    
     filtered_data = {}
     for name, df in data.items():
         if df.empty:
             filtered_data[name] = df
-            st.info(f"🔍 Debug: {name} table is empty, skipping filter")
             continue
 
         # Determine which date column to use for filtering
@@ -326,8 +301,6 @@ def filter_data_by_date(data: Dict[str, pd.DataFrame], start_date: pd.Timestamp,
             date_col = 'campaign_date'
         
         if date_col:
-            st.info(f"🔍 Debug: Filtering {name} table using {date_col} column")
-            
             # Make a copy only if we need to modify the date column
             df_to_filter = df
             
@@ -353,12 +326,9 @@ def filter_data_by_date(data: Dict[str, pd.DataFrame], start_date: pd.Timestamp,
             )
             filtered_df = df_to_filter[valid_dates][mask]
             filtered_data[name] = filtered_df
-            
-            st.info(f"✅ Debug: {name} filtered from {len(df)} to {len(filtered_df)} rows")
         else:
             # If no date column is found, return the original dataframe
             filtered_data[name] = df
-            st.info(f"🔍 Debug: No date column found in {name}, keeping all {len(df)} rows")
             
     return filtered_data
 
